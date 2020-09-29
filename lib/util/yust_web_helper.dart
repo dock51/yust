@@ -6,8 +6,8 @@ import 'package:mime/mime.dart';
 import '../yust.dart';
 
 class YustWebHelper {
-  static Future<String> uploadImage(
-      String path, String name, Uint8List bytes) async {
+  static Future<String> uploadFile(
+      {String path, String name, Uint8List bytes}) async {
     var metadata = fb.UploadMetadata(
       contentType: lookupMimeType(name),
     );
@@ -19,7 +19,7 @@ class YustWebHelper {
     return uri.toString();
   }
 
-  static Future<void> deleteImage(String path, String name) async {
+  static Future<void> deleteFile({String path, String name}) async {
     await fb
         .app()
         .storage()
