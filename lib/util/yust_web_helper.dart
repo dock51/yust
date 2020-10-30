@@ -19,6 +19,10 @@ class YustWebHelper {
     return uri.toString();
   }
 
+  static Future<void> downloadFile({String path, String name}) async {
+    YustException('Function not implemented');
+  }
+
   static Future<void> deleteFile({String path, String name}) async {
     await fb
         .app()
