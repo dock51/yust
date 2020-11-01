@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:firebase/firebase.dart' as fb;
+import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
 import 'package:yust/util/yust_exception.dart';
 
@@ -20,8 +21,16 @@ class YustWebHelper {
     return uri.toString();
   }
 
-  static Future<void> downloadFile({String path, String name}) async {
-    YustException('Function not implemented');
+  static Future<Uint8List> downloadFile({String path, String name}) async {
+    final url = await fb
+        .app()
+        .storage()
+        .refFromURL(Yust.storageUrl)
+        .child(path)
+        .child(name)
+        .getDownloadURL();
+    var res = await http.get(url);
+    return res.bodyBytes;
   }
 
   static Future<void> deleteFile({String path, String name}) async {
