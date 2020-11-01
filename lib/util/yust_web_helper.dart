@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:firebase/firebase.dart' as fb;
 import 'package:http/http.dart' as http;
 import 'package:mime/mime.dart';
-import 'package:yust/util/yust_exception.dart';
 
 import '../yust.dart';
 
