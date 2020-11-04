@@ -41,4 +41,8 @@ class YustWebHelper {
         .child(name)
         .delete();
   }
+
+  static void launch(String url) {
+    YustException('Function not implemented');
+  }
 }
