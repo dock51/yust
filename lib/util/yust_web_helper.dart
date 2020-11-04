@@ -1,3 +1,4 @@
+import 'dart:js' as js;
 import 'dart:typed_data';
 
 import 'package:firebase/firebase.dart' as fb;
@@ -43,6 +44,6 @@ class YustWebHelper {
   }
 
   static void launch(String url) {
-    YustException('Function not implemented');
+    js.context.callMethod("open", [url]);
   }
 }
