@@ -1,4 +1,4 @@
-import 'dart:js' as js;
+import 'dart:html' as html;
 import 'dart:typed_data';
 
 import 'package:firebase/firebase.dart' as fb;
@@ -43,7 +43,9 @@ class YustWebHelper {
         .delete();
   }
 
-  static void launch(String url) {
-    js.context.callMethod("open", [url]);
+  static void downloadAndSaveFileByUrl(String url) {
+    html.AnchorElement anchorElement = new html.AnchorElement(href: url);
+    anchorElement.download = url;
+    anchorElement.click();
   }
 }
