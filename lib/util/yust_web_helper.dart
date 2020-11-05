@@ -44,7 +44,6 @@ class YustWebHelper {
   }
 
   static void downloadAndSaveFileByUrl(String url) {
-    //
     html.AnchorElement anchorElement = new html.AnchorElement(href: url);
     anchorElement.download = url;
     anchorElement.click();
