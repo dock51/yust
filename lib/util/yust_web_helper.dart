@@ -43,8 +43,9 @@ class YustWebHelper {
         .delete();
   }
 
-  static Future<String> getDownloadUrl({String path, String name}) async {
+  static Future<bool> fileExist({String path, String name}) async {
     YustException('Function not implemented');
+    return null;
   }
 
   static void downloadAndSaveFileByUrl(String url) {
