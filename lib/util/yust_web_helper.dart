@@ -44,8 +44,18 @@ class YustWebHelper {
   }
 
   static Future<bool> fileExist({String path, String name}) async {
-    YustException('Function not implemented');
-    return null;
+    try {
+      await fb
+          .app()
+          .storage()
+          .refFromURL(Yust.storageUrl)
+          .child(path)
+          .child(name)
+          .getDownloadURL();
+    } on fb.FirebaseError catch (e) {
+      if (e.code == 'storage/object-not-found') return false;
+    }
+    return true;
   }
 
   static void downloadAndSaveFileByUrl(String url) {
