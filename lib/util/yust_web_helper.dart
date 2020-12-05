@@ -59,8 +59,14 @@ class YustWebHelper {
   }
 
   static Future<String> getFileDownloadUrl({String path, String name}) async {
-    YustException('Function not implemented');
-    return null;
+    final uri = await fb
+        .app()
+        .storage()
+        .refFromURL(Yust.storageUrl)
+        .child(path)
+        .child(name)
+        .getDownloadURL();
+    return uri.toString();
   }
 
   static void downloadAndSaveFileByUrl(String url) {
