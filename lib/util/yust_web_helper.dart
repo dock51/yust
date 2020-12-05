@@ -58,6 +58,11 @@ class YustWebHelper {
     return true;
   }
 
+  static Future<String> getFileDownloadUrl({String path, String name}) async {
+    YustException('Function not implemented');
+    return null;
+  }
+
   static void downloadAndSaveFileByUrl(String url) {
     html.AnchorElement anchorElement = new html.AnchorElement(href: url);
     anchorElement.download = url;
