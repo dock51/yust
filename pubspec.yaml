@@ -1,7 +1,7 @@
 name: yust
 description: Build awesome apps with Flutter and Firebase.
-version: 1.6.0
-homepage: https://janneskoehler.de
+version: 1.6.1
+homepage: https://github.com/janneskoehler/yust
 
 environment:
   sdk: ">=2.7.0 <2.12.0"
