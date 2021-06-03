@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:connectivity/connectivity.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -410,9 +411,10 @@ class YustService {
       //     uploadTask.events.listen((event) {
       //   print('EVENT ${event.type}');
       // });
-      await uploadTask;
+
+      uploadTask;
       // streamSubscription.cancel();
-      return await storageReference.getDownloadURL();
+      return storageReference.getDownloadURL();
     } catch (error) {
       throw YustException('Fehler beim Upload: ' + error.toString());
     }

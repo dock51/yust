@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity/connectivity.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
@@ -109,74 +110,65 @@ class _YustFilePickerState extends State<YustFilePicker> {
   }
 
   Future<void> _pickFiles() async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) {
-      Yust.service.showAlert(context, 'Kein Internet',
-          'Für das Hinzufügen einer Datei ist eine Internetverbindung erforderlich.');
-    } else {
-      final result = await FilePicker.platform.pickFiles(allowMultiple: true);
-      if (result != null) {
-        for (final platformFile in result.files) {
-          var name = platformFile.name!.split('/').last;
-          final ext = platformFile.extension;
-          if (ext != null && name.split('.').last != ext) {
-            name += '.' + ext;
-          }
-          Map<String, String> fileData = {
-            'name': name,
-          };
-          if (_files.any((file) => file['name'] == fileData['name'])) {
-            Yust.service.showAlert(context, 'Nicht möglich',
-                'Eine Datei mit dem Namen ${fileData['name']} existiert bereits.');
-          } else {
-            setState(() {
-              _files.add(fileData);
-              _files.sort((a, b) => a['name']!.compareTo(b['name']!));
-              _processing[fileData['name']] = true;
-            });
-            File? file;
-            if (platformFile.path != null) {
-              file = File(platformFile.path!);
-            }
-            try {
-              fileData['url'] = await Yust.service.uploadFile(
-                path: widget.folderPath,
-                name: fileData['name']!,
-                file: file,
-                bytes: platformFile.bytes,
-              );
-            } on YustException catch (e) {
-              Yust.service.showAlert(context, 'Ups', e.message);
-            } catch (e) {
-              Yust.service.showAlert(
-                  context, 'Ups', 'Die Datei konnte nicht hochgeladen werden.');
-            }
-            if (fileData['url'] == null) {
-              _files.remove(fileData);
-            }
-            setState(() {
-              _processing[fileData['name']] = false;
-            });
-          }
+    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    if (result != null) {
+      for (final platformFile in result.files) {
+        var name = platformFile.name!.split('/').last;
+        final ext = platformFile.extension;
+        if (ext != null && name.split('.').last != ext) {
+          name += '.' + ext;
         }
-        widget.onChanged!(_files);
+        Map<String, String> fileData = {
+          'name': name,
+        };
+        if (_files.any((file) => file['name'] == fileData['name'])) {
+          Yust.service.showAlert(context, 'Nicht möglich',
+              'Eine Datei mit dem Namen ${fileData['name']} existiert bereits.');
+        } else {
+          setState(() {
+            _files.add(fileData);
+            _files.sort((a, b) => a['name']!.compareTo(b['name']!));
+            _processing[fileData['name']] = true;
+          });
+          File? file;
+          if (platformFile.path != null) {
+            file = File(platformFile.path!);
+          }
+          try {
+            var result = await Yust.service.uploadFile(
+              path: widget.folderPath,
+              name: fileData['name']!,
+              file: file,
+              bytes: platformFile.bytes,
+            );
+            fileData['url'] = result;
+          } on YustException catch (e) {
+            Yust.service.showAlert(context, 'Ups', e.message);
+          } catch (e) {
+            Yust.service.showAlert(
+                context, 'Ups', 'Die Datei konnte nicht hochgeladen werden.');
+          }
+          if (fileData['url'] == null) {
+            _files.remove(fileData);
+          }
+          setState(() {
+            _processing[fileData['name']] = false;
+          });
+        }
       }
+      widget.onChanged!(_files);
     }
   }
 
   Future<void> _showFile(Map<String, String> file) async {
-    final connectivityResult = await Connectivity().checkConnectivity();
-    if (connectivityResult == ConnectivityResult.none) {
-      Yust.service.showAlert(context, 'Kein Internet',
-          'Für das Anzeigen einer Datei ist eine Internetverbindung erforderlich.');
-      // is it a valid file?
-    } else if (file['name'] != null && _processing[file['name']] != true) {
+    if (file['name'] != null && _processing[file['name']] != true) {
       // is the process running on mobile?
       if (!kIsWeb) {
         await EasyLoading.show(status: 'Datei laden...');
         try {
           final tempDir = await getTemporaryDirectory();
-          await Dio().download(file['url']!, '${tempDir.path}/${file['name']}');
+          Dio().download(file['url']!, '${tempDir.path}/${file['name']}');
+
           var result = await OpenFile.open('${tempDir.path}/${file['name']}');
           // if cant open file type, tries via browser
           if (result.type != ResultType.done) {
@@ -190,6 +182,7 @@ class _YustFilePickerState extends State<YustFilePicker> {
               'Die Datei kann nicht geöffnet werden. ${e.toString()}');
         }
       } else {
+        await FirebaseFirestore.instance.enablePersistence();
         await EasyLoading.show(status: 'Datei laden...');
         _launchBrowser(file);
         await EasyLoading.dismiss();
@@ -216,7 +209,7 @@ class _YustFilePickerState extends State<YustFilePicker> {
           .showConfirmation(context, 'Wirklich löschen?', 'Löschen');
       if (confirmed == true) {
         try {
-          await firebase_storage.FirebaseStorage.instance
+          firebase_storage.FirebaseStorage.instance
               .ref()
               .child(widget.folderPath)
               .child(file['name']!)
