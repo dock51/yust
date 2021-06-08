@@ -406,15 +406,20 @@ class YustService {
           contentType: lookupMimeType(name),
         );
         uploadTask = storageReference.putData(bytes!, metadata);
+        // vermerk das uploadTask ohne Internet läuft
       }
       // final StreamSubscription<StorageTaskEvent> streamSubscription =
       //     uploadTask.events.listen((event) {
       //   print('EVENT ${event.type}');
       // });
 
-      uploadTask;
+      await uploadTask;
       // streamSubscription.cancel();
-      return storageReference.getDownloadURL();
+
+      // lokale  URL! mit ohne Internet
+      // wenn wieder Internet neue URL im Build abspeichern
+      // upload task ID? Zum Tracken der ID?
+      return await storageReference.getDownloadURL();
     } catch (error) {
       throw YustException('Fehler beim Upload: ' + error.toString());
     }
