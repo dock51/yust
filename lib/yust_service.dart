@@ -402,7 +402,7 @@ class YustService {
       firebase_storage.UploadTask uploadTask;
       //FirebaseDatabase works with offline cache...
       //FirebaseDatabase.getInstance().setPersistenceEnabled(true);
-      //no implementations for FirebaseStorage
+      //no implementations for FirebaseStorage https://github.com/firebase/firebase-js-sdk/issues/2627
       if (file != null) {
         uploadTask = storageReference.putFile(file);
       } else {
