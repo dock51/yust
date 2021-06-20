@@ -133,7 +133,7 @@ class YustService {
       doc = modelSetup.newDoc();
     }
     doc.id = FirebaseFirestore.instance
-        .collection(modelSetup.collectionName)
+        .collection(_getCollectionPath(modelSetup))
         .doc()
         .id;
     doc.createdAt = DateTime.now();
@@ -163,7 +163,7 @@ class YustService {
     List<String>? orderByList,
   }) {
     Query query =
-        FirebaseFirestore.instance.collection(modelSetup.collectionName);
+        FirebaseFirestore.instance.collection(_getCollectionPath(modelSetup));
     query = _executeStaticFilters(query, modelSetup);
     query = _executeFilterList(query, filterList);
     query = _executeOrderByList(query, orderByList);
@@ -181,7 +181,7 @@ class YustService {
     List<String>? orderByList,
   }) {
     Query query =
-        FirebaseFirestore.instance.collection(modelSetup.collectionName);
+        FirebaseFirestore.instance.collection(_getCollectionPath(modelSetup));
     query = _executeStaticFilters(query, modelSetup);
     query = _executeFilterList(query, filterList);
     query = _executeOrderByList(query, orderByList);
@@ -199,7 +199,7 @@ class YustService {
     String id,
   ) {
     return FirebaseFirestore.instance
-        .collection(modelSetup.collectionName)
+        .collection(_getCollectionPath(modelSetup))
         .doc(id)
         .snapshots()
         .map((docSnapshot) => _getDoc(modelSetup, docSnapshot));
@@ -210,7 +210,7 @@ class YustService {
     String id,
   ) {
     return FirebaseFirestore.instance
-        .collection(modelSetup.collectionName)
+        .collection(_getCollectionPath(modelSetup))
         .doc(id)
         .get(GetOptions(source: Source.server))
         .then((docSnapshot) => _getDoc<T>(modelSetup, docSnapshot)!);
@@ -223,7 +223,7 @@ class YustService {
     List<String>? orderByList,
   }) {
     Query query =
-        FirebaseFirestore.instance.collection(modelSetup.collectionName);
+        FirebaseFirestore.instance.collection(_getCollectionPath(modelSetup));
     query = _executeStaticFilters(query, modelSetup);
     query = _executeFilterList(query, filterList);
     query = _executeOrderByList(query, orderByList);
@@ -244,7 +244,7 @@ class YustService {
     List<String>? orderByList,
   }) async {
     Query query =
-        FirebaseFirestore.instance.collection(modelSetup.collectionName);
+        FirebaseFirestore.instance.collection(_getCollectionPath(modelSetup));
     query = _executeStaticFilters(query, modelSetup);
     query = _executeFilterList(query, filterList);
     query = _executeOrderByList(query, orderByList);
@@ -277,7 +277,7 @@ class YustService {
     bool skipOnSave = false,
   }) async {
     var collection =
-        FirebaseFirestore.instance.collection(modelSetup.collectionName);
+        FirebaseFirestore.instance.collection(_getCollectionPath(modelSetup));
     if (trackModification) {
       doc.modifiedAt = DateTime.now();
       doc.modifiedBy = Yust.store.currUser?.id;
@@ -327,7 +327,7 @@ class YustService {
       await modelSetup.onDelete!(doc);
     }
     var docRef = FirebaseFirestore.instance
-        .collection(modelSetup.collectionName)
+        .collection(_getCollectionPath(modelSetup))
         .doc(doc.id);
     await docRef.delete();
   }
@@ -368,7 +368,7 @@ class YustService {
     await FirebaseFirestore.instance.runTransaction(
       (Transaction transaction) async {
         final DocumentReference documentReference = FirebaseFirestore.instance
-            .collection(modelSetup.collectionName)
+            .collection(_getCollectionPath(modelSetup))
             .doc(id);
 
         final DocumentSnapshot startSnapshot =
@@ -684,7 +684,7 @@ class YustService {
     Query query,
     YustDocSetup<T> modelSetup,
   ) {
-    if (modelSetup.forEnvironment) {
+    if (!Yust.useSubcollections && modelSetup.forEnvironment) {
       query = _filterForEnvironment(query);
     }
     if (modelSetup.forUser) {
@@ -759,5 +759,17 @@ class YustService {
       });
     }
     return query;
+  }
+
+  String _getCollectionPath(YustDocSetup modelSetup) {
+    var collectionPath = modelSetup.collectionName;
+    if (Yust.useSubcollections && modelSetup.forEnvironment) {
+      collectionPath = Yust.envCollectionName +
+          '/' +
+          Yust.store.currUser!.currEnvId! +
+          '/' +
+          modelSetup.collectionName;
+    }
+    return collectionPath;
   }
 }
