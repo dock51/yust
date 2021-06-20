@@ -398,7 +398,11 @@ class YustService {
           .ref()
           .child(path)
           .child(name);
+      
       firebase_storage.UploadTask uploadTask;
+      //FirebaseDatabase works with offline cache...
+      //FirebaseDatabase.getInstance().setPersistenceEnabled(true);
+      //no implementations for FirebaseStorage
       if (file != null) {
         uploadTask = storageReference.putFile(file);
       } else {
@@ -413,7 +417,9 @@ class YustService {
       //   print('EVENT ${event.type}');
       // });
 
-      await uploadTask;
+      //await uploadTask;
+      final downloadUrl = (await uploadTask.); //.downloadUrl;
+      print(downloadUrl.toString());
       // streamSubscription.cancel();
 
       // lokale  URL! mit ohne Internet
