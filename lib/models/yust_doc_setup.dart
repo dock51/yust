@@ -2,6 +2,7 @@ import 'yust_doc.dart';
 
 class YustDocSetup<T extends YustDoc> {
   String collectionName;
+  // TODO: Remove
   T Function(Map<String, dynamic> json) fromJson;
   T Function() newDoc;
 
@@ -15,7 +16,9 @@ class YustDocSetup<T extends YustDoc> {
   bool isEnvironment;
 
   void Function(T doc)? onInit;
+  @deprecated
   void Function(T doc)? onMigrate;
+  void Function(T doc)? onGet;
   Future<void> Function(T doc)? onSave;
   Future<void> Function(T doc)? onDelete;
 
@@ -28,6 +31,7 @@ class YustDocSetup<T extends YustDoc> {
     this.isEnvironment = false,
     this.onInit,
     this.onMigrate,
+    this.onGet,
     this.onSave,
     this.onDelete,
   });

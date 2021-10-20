@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:connectivity/connectivity.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:flutter/foundation.dart';
@@ -12,7 +12,13 @@ import 'package:yust/screens/image.dart';
 import 'package:yust/yust.dart';
 import 'package:yust/util/list_extension.dart';
 
-/// See https://pub.dev/packages/image_picker for installation information.
+final Map<String, Map<String, int>> YustImageQuality = {
+  'original': {'quality': 100, 'size': 5000},
+  'high': {'quality': 100, 'size': 2000},
+  'medium': {'quality': 90, 'size': 1200},
+  'low': {'quality': 80, 'size': 800},
+};
+
 class YustImagePicker extends StatefulWidget {
   final String? label;
   final String folderPath;
@@ -22,6 +28,7 @@ class YustImagePicker extends StatefulWidget {
   final void Function(List<Map<String, dynamic>> images)? onChanged;
   final Widget? prefixIcon;
   final bool readOnly;
+  final String yustQuality;
 
   YustImagePicker({
     Key? key,
@@ -33,13 +40,13 @@ class YustImagePicker extends StatefulWidget {
     this.onChanged,
     this.prefixIcon,
     this.readOnly = false,
+    this.yustQuality = 'medium',
   }) : super(key: key);
-
   @override
-  _YustImagePickerState createState() => _YustImagePickerState();
+  YustImagePickerState createState() => YustImagePickerState();
 }
 
-class _YustImagePickerState extends State<YustImagePicker> {
+class YustImagePickerState extends State<YustImagePicker> {
   late List<YustFile> _files;
   late bool _enabled;
 
@@ -56,6 +63,7 @@ class _YustImagePickerState extends State<YustImagePicker> {
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 8.0, right: 16.0, bottom: 8.0),
@@ -63,12 +71,12 @@ class _YustImagePickerState extends State<YustImagePicker> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Flexible(
-                flex: 2,
-                fit: FlexFit.tight,
+                flex: 1,
+                fit: FlexFit.loose,
                 child: _buildLabel(context),
               ),
               Flexible(
-                flex: 1,
+                flex: 2,
                 fit: FlexFit.tight,
                 child: Stack(
                   alignment: AlignmentDirectional.center,
@@ -128,7 +136,7 @@ class _YustImagePickerState extends State<YustImagePicker> {
       return Align(
         alignment: Alignment.centerRight,
         child: IconButton(
-          color: Theme.of(context).accentColor,
+          color: Theme.of(context).colorScheme.secondary,
           iconSize: 40,
           icon: Icon(Icons.image),
           onPressed: _enabled ? () => _pickImages(ImageSource.gallery) : null,
@@ -139,13 +147,13 @@ class _YustImagePickerState extends State<YustImagePicker> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: <Widget>[
           IconButton(
-            color: Theme.of(context).accentColor,
+            color: Theme.of(context).colorScheme.secondary,
             iconSize: 40,
             icon: Icon(Icons.camera_alt),
             onPressed: _enabled ? () => _pickImages(ImageSource.camera) : null,
           ),
           IconButton(
-            color: Theme.of(context).accentColor,
+            color: Theme.of(context).colorScheme.secondary,
             iconSize: 40,
             icon: Icon(Icons.image),
             onPressed: _enabled ? () => _pickImages(ImageSource.gallery) : null,
@@ -195,18 +203,33 @@ class _YustImagePickerState extends State<YustImagePicker> {
       );
     }
     final zoomEnabled = (file.url != null && widget.zoomable);
-    return AspectRatio(
-      aspectRatio: 1,
-      child: GestureDetector(
-        onTap: zoomEnabled ? () => _showImages(file) : null,
-        child: file.url != null
-            ? Hero(
-                tag: file.url!,
-                child: preview,
-              )
-            : preview,
-      ),
-    );
+    if (widget.multiple) {
+      return AspectRatio(
+        aspectRatio: 1,
+        child: GestureDetector(
+          onTap: zoomEnabled ? () => _showImages(file) : null,
+          child: file.url != null
+              ? Hero(
+                  tag: file.url!,
+                  child: preview,
+                )
+              : preview,
+        ),
+      );
+    } else {
+      return ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: 300, maxWidth: 400),
+        child: GestureDetector(
+          onTap: zoomEnabled ? () => _showImages(file) : null,
+          child: file.url != null
+              ? Hero(
+                  tag: file.url!,
+                  child: preview,
+                )
+              : preview,
+        ),
+      );
+    }
   }
 
   Widget _buildProgressIndicator(BuildContext context, YustFile? file) {
@@ -228,8 +251,8 @@ class _YustImagePickerState extends State<YustImagePicker> {
             child: Text(
               'Bild hochladen',
               overflow: TextOverflow.ellipsis,
-              style:
-                  TextStyle(color: Theme.of(context).accentColor, fontSize: 16),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.secondary, fontSize: 16),
             ),
           ),
         ],
@@ -246,7 +269,7 @@ class _YustImagePickerState extends State<YustImagePicker> {
       right: 10,
       child: CircleAvatar(
         radius: 26,
-        backgroundColor: Theme.of(context).accentColor,
+        backgroundColor: Theme.of(context).colorScheme.secondary,
         child: IconButton(
           icon: Icon(Icons.clear),
           color: Colors.black,
@@ -257,16 +280,39 @@ class _YustImagePickerState extends State<YustImagePicker> {
   }
 
   Future<void> _pickImages(ImageSource imageSource) async {
+    Yust.service.unfocusCurrent(context);
+    final size = YustImageQuality[widget.yustQuality]!['size']!.toDouble();
+    final quality = YustImageQuality[widget.yustQuality]!['quality']!;
     final connectivityResult = await Connectivity().checkConnectivity();
     if (connectivityResult == ConnectivityResult.none) {
       Yust.service.showAlert(context, 'Kein Internet',
           'Für das Hinzufügen von Bildern ist eine Internetverbindung erforderlich.');
     } else {
       if (!kIsWeb) {
-        final image = await ImagePicker()
-            .getImage(source: imageSource, maxHeight: 800, maxWidth: 800);
-        if (image != null) {
-          await _uploadFile(path: image.path, file: File(image.path));
+        final picker = ImagePicker();
+        if (widget.multiple && imageSource == ImageSource.gallery) {
+          final images = await picker.pickMultiImage(
+              maxHeight: size, maxWidth: size, imageQuality: quality);
+          if (images != null) {
+            for (final image in images) {
+              await uploadFile(
+                  path: image.path,
+                  file: File(image.path),
+                  yustQuality: widget.yustQuality);
+            }
+          }
+        } else {
+          final image = await picker.pickImage(
+              source: imageSource,
+              maxHeight: size,
+              maxWidth: size,
+              imageQuality: quality);
+          if (image != null) {
+            await uploadFile(
+                path: image.path,
+                file: File(image.path),
+                yustQuality: widget.yustQuality);
+          }
         }
       } else {
         if (widget.multiple) {
@@ -274,10 +320,11 @@ class _YustImagePickerState extends State<YustImagePicker> {
               .pickFiles(type: FileType.image, allowMultiple: true);
           if (result != null) {
             for (final platformFile in result.files) {
-              await _uploadFile(
+              await uploadFile(
                 path: platformFile.name!,
                 bytes: platformFile.bytes,
                 resize: true,
+                yustQuality: widget.yustQuality,
               );
             }
           }
@@ -285,55 +332,64 @@ class _YustImagePickerState extends State<YustImagePicker> {
           final result =
               await FilePicker.platform.pickFiles(type: FileType.image);
           if (result != null) {
-            await _uploadFile(
-              path: result.files.single.name!,
-              bytes: result.files.single.bytes,
-              resize: true,
-            );
+            await uploadFile(
+                path: result.files.single.name!,
+                bytes: result.files.single.bytes,
+                resize: true,
+                yustQuality: widget.yustQuality);
           }
         }
       }
     }
   }
 
-  Future<void> _uploadFile(
-      {required String path,
-      File? file,
-      Uint8List? bytes,
-      bool resize = false}) async {
+  Future<void> uploadFile({
+    required String path,
+    File? file,
+    Uint8List? bytes,
+    bool resize = false,
+    required String yustQuality,
+  }) async {
+    final imageName =
+        Yust.service.randomString(length: 16) + '.' + path.split('.').last;
+    final newFile =
+        YustFile(name: imageName, file: file, bytes: bytes, processing: true);
+    setState(() {
+      _files.add(newFile);
+    });
     try {
-      final imageName =
-          Yust.service.randomString(length: 16) + '.' + path.split('.').last;
-      final newFile =
-          YustFile(name: imageName, file: file, bytes: bytes, processing: true);
-      setState(() {
-        _files.add(newFile);
-      });
-
       if (resize) {
+        final size = YustImageQuality[widget.yustQuality]!['size']!;
         if (file != null) {
-          file = await Yust.service.resizeImage(file: file, maxWidth: 800);
+          file = await Yust.service.resizeImage(file: file, maxWidth: size);
           newFile.file = file;
         } else {
           bytes = Yust.service
-              .resizeImageBytes(name: path, bytes: bytes!, maxWidth: 800);
+              .resizeImageBytes(name: path, bytes: bytes!, maxWidth: size);
           newFile.bytes = bytes;
         }
       }
 
       String url = await Yust.service.uploadFile(
           path: widget.folderPath, name: imageName, file: file, bytes: bytes);
-      setState(() {
-        newFile.url = url;
-        newFile.processing = false;
-      });
+      newFile.url = url;
+      newFile.processing = false;
+      if (mounted) {
+        setState(() {});
+      }
       widget.onChanged!(_files.map((file) => file.toJson()).toList());
     } catch (e) {
-      Yust.service.showAlert(context, 'Ups', e.toString());
+      if (mounted) {
+        setState(() {
+          _files.remove(newFile);
+        });
+        Yust.service.showAlert(context, 'Ups', e.toString());
+      }
     }
   }
 
   void _showImages(YustFile activeFile) {
+    Yust.service.unfocusCurrent(context);
     if (widget.multiple) {
       Navigator.pushNamed(context, ImageScreen.routeName, arguments: {
         'urls': _files.map((file) => file.url).toList(),
@@ -347,6 +403,7 @@ class _YustImagePickerState extends State<YustImagePicker> {
   }
 
   Future<void> _deleteImage(YustFile file) async {
+    Yust.service.unfocusCurrent(context);
     final connectivityResult = await Connectivity().checkConnectivity();
     if (connectivityResult == ConnectivityResult.none) {
       Yust.service.showAlert(context, 'Kein Internet',

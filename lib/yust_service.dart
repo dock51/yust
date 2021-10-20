@@ -25,15 +25,9 @@ class YustService {
 
   Future<void> signIn(
     BuildContext context,
-    String? email,
-    String? password,
+    String email,
+    String password,
   ) async {
-    if (email == null || email == '') {
-      throw YustException('Die E-Mail darf nicht leer sein.');
-    }
-    if (password == null || password == '') {
-      throw YustException('Das Passwort darf nicht leer sein.');
-    }
     await fireAuth.signInWithEmailAndPassword(
       email: email,
       password: password,
@@ -42,28 +36,13 @@ class YustService {
 
   Future<void> signUp(
     BuildContext context,
-    String? firstName,
-    String? lastName,
-    String? email,
-    String? password,
-    String? passwordConfirmation, {
+    String firstName,
+    String lastName,
+    String email,
+    String password,
+    String passwordConfirmation, {
     YustGender? gender,
   }) async {
-    if (firstName == null || firstName == '') {
-      throw YustException('Der Vorname darf nicht leer sein.');
-    }
-    if (lastName == null || lastName == '') {
-      throw YustException('Der Nachname darf nicht leer sein.');
-    }
-    if (email == null || email == '') {
-      throw YustException('Die E-Mail darf nicht leer sein.');
-    }
-    if (password == null || password == '') {
-      throw YustException('Das Passwort darf nicht leer sein.');
-    }
-    if (password != passwordConfirmation) {
-      throw YustException('Die Passwörter stimmen nicht überein.');
-    }
     final UserCredential userCredential = await fireAuth
         .createUserWithEmailAndPassword(email: email, password: password);
     final user = Yust.userSetup.newDoc()
@@ -95,10 +74,7 @@ class YustService {
     );
   }
 
-  Future<void> sendPasswordResetEmail(String? email) async {
-    if (email == null || email == '') {
-      throw YustException('Die E-Mail darf nicht leer sein.');
-    }
+  Future<void> sendPasswordResetEmail(String email) async {
     await fireAuth.sendPasswordResetEmail(email: email);
   }
 
@@ -253,13 +229,7 @@ class YustService {
     T? doc;
 
     if (snapshot.docs.length > 0) {
-      final data = snapshot.docs[0].data();
-      if (data is Map<String, dynamic>) {
-        doc = modelSetup.fromJson(data);
-        if (modelSetup.onMigrate != null) {
-          modelSetup.onMigrate!(doc);
-        }
-      }
+      doc = _getDoc(modelSetup, snapshot.docs[0]);
     }
     return doc;
   }
@@ -297,16 +267,10 @@ class YustService {
     if (modelSetup.onSave != null && !skipOnSave) {
       await modelSetup.onSave!(doc);
     }
+    await collection.doc(doc.id).set(doc.toJson(), SetOptions(merge: merge));
 
-    if (doc.id != null) {
-      await collection.doc(doc.id).set(doc.toJson(), SetOptions(merge: merge));
-    } else {
-      var ref = await collection.add(doc.toJson());
-      doc.id = ref.id;
-      await ref.set(doc.toJson());
-    }
-
-    return getDocOnce<T>(modelSetup, doc.id!);
+    // TODO: Remove
+    return getDocOnce<T>(modelSetup, doc.id);
   }
 
   Future<void> deleteDocs<T extends YustDoc>(
@@ -398,7 +362,7 @@ class YustService {
           .ref()
           .child(path)
           .child(name);
-      
+
       firebase_storage.UploadTask uploadTask;
       //FirebaseDatabase works with offline cache...
       //FirebaseDatabase.getInstance().setPersistenceEnabled(true);
@@ -418,13 +382,14 @@ class YustService {
       // });
 
       //await uploadTask;
-      final downloadUrl = (await uploadTask.); //.downloadUrl;
-      print(downloadUrl.toString());
+      // final downloadUrl = (await uploadTask.); //.downloadUrl;
+      // print(downloadUrl.toString());
       // streamSubscription.cancel();
 
       // lokale  URL! mit ohne Internet
       // wenn wieder Internet neue URL im Build abspeichern
       // upload task ID? Zum Tracken der ID?
+      await uploadTask;
       return await storageReference.getDownloadURL();
     } catch (error) {
       throw YustException('Fehler beim Upload: ' + error.toString());
@@ -604,6 +569,14 @@ class YustService {
     ));
   }
 
+  /// Does unfocus the current focus node.
+  void unfocusCurrent(BuildContext context) {
+    final currentFocus = FocusScope.of(context);
+    if (!currentFocus.hasPrimaryFocus) {
+      currentFocus.unfocus();
+    }
+  }
+
   /// Does not return null.
   ///
   /// Use formatIsoDate for backwards compatibility.
@@ -669,11 +642,16 @@ class YustService {
       return null;
     }
     final data = snapshot.data();
+    // TODO: Convert timestamps
     if (data is Map<String, dynamic>) {
       final T document = modelSetup.fromJson(data);
 
       if (modelSetup.onMigrate != null) {
         modelSetup.onMigrate!(document);
+      }
+
+      if (modelSetup.onGet != null) {
+        modelSetup.onGet!(document);
       }
 
       return document;

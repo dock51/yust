@@ -6,22 +6,28 @@ import '../yust.dart';
 
 abstract class YustDoc with YustSerializable {
   @JsonKey()
-  String? id;
+  String id;
+
   @JsonKey(fromJson: YustDoc.dateTimeFromJson, toJson: YustDoc.dateTimeToJson)
   DateTime? createdAt;
+
   @JsonKey()
   String? createdBy;
+
   @JsonKey(fromJson: YustDoc.dateTimeFromJson, toJson: YustDoc.dateTimeToJson)
   DateTime? modifiedAt;
+
   @JsonKey()
   String? modifiedBy;
+
   @JsonKey()
   String? userId;
+
   @JsonKey()
   String? envId;
 
   YustDoc({
-    this.id,
+    this.id = '',
     this.createdAt,
     this.createdBy,
     this.modifiedAt,
@@ -30,7 +36,7 @@ abstract class YustDoc with YustSerializable {
     this.envId,
   });
 
-  YustDoc.fromJson(Map<String, dynamic> json);
+  YustDoc.fromJson(Map<String, dynamic> json) : this.id = '';
 
   Map<String, dynamic> toJson();
 
@@ -38,7 +44,10 @@ abstract class YustDoc with YustSerializable {
     return list.map((item) => item.toJson()).toList();
   }
 
-  static Map<String, T?> mapFromJson<T>(Map<String, dynamic> map) {
+  static Map<String, T?> mapFromJson<T>(Map<String, dynamic>? map) {
+    if (map == null) {
+      return {};
+    }
     return map.map<String, T?>((key, value) {
       if (value is FieldValue) {
         return MapEntry(key, null);
@@ -83,10 +92,12 @@ abstract class YustDoc with YustSerializable {
     });
   }
 
+  // TODO: delete, use convertTimestamp instead
   static DateTime? dateTimeFromJson(dynamic timestamp) {
     if (timestamp is Timestamp) {
       return timestamp.toDate();
-    } else if (timestamp is String) {
+    } else if (timestamp is String &&
+        RegExp(r'^\d{4}-\d{2}-\d{2}').hasMatch(timestamp)) {
       return DateTime.parse(timestamp);
     } else if (timestamp is Map && timestamp['_seconds'] != null) {
       return Timestamp(timestamp['_seconds'], timestamp['_nanoseconds'])
@@ -96,6 +107,7 @@ abstract class YustDoc with YustSerializable {
     }
   }
 
+  // TODO; delete
   static dynamic dateTimeToJson(DateTime? dateTime) {
     if (dateTime == null) {
       return null;
@@ -103,6 +115,14 @@ abstract class YustDoc with YustSerializable {
       return Timestamp.fromDate(dateTime);
     } else {
       return dateTime.toIso8601String();
+    }
+  }
+
+  static dynamic convertTimestamp(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    } else {
+      return value;
     }
   }
 }

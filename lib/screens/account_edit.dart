@@ -33,7 +33,15 @@ class AccountEditScreen<T extends YustStore> extends StatelessWidget {
               YustTextField(
                 label: 'Vorname',
                 value: user.firstName,
-                onChanged: (value) {
+                validator: (value) {
+                  if (value == null || value == '') {
+                    return 'Es muss ein Vorname angegeben werden.';
+                  } else {
+                    return null;
+                  }
+                },
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                onEditingComplete: (value) async {
                   user.firstName = value;
                   Yust.service.saveDoc<YustUser>(Yust.userSetup, user);
                 },
@@ -41,7 +49,15 @@ class AccountEditScreen<T extends YustStore> extends StatelessWidget {
               YustTextField(
                 label: 'Nachname',
                 value: user.lastName,
-                onChanged: (value) {
+                validator: (value) {
+                  if (value == null || value == '') {
+                    return 'Es muss ein Nachname angegeben werden.';
+                  } else {
+                    return null;
+                  }
+                },
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                onEditingComplete: (value) async {
                   user.lastName = value;
                   Yust.service.saveDoc<YustUser>(Yust.userSetup, user);
                 },
@@ -115,7 +131,8 @@ class AccountEditScreen<T extends YustStore> extends StatelessWidget {
                 TextButton(
                   child: Text(
                     'Speichern',
-                    style: TextStyle(color: Theme.of(context).accentColor),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.secondary),
                   ),
                   onPressed: () async {
                     try {
@@ -126,9 +143,11 @@ class AccountEditScreen<T extends YustStore> extends StatelessWidget {
                       Yust.service.showAlert(context, 'E-Mail geändert',
                           'Deine E-Mail wurde erfolgreich geändert.');
                     } on PlatformException catch (err) {
+                      EasyLoading.dismiss();
                       Navigator.of(context).pop();
                       Yust.service.showAlert(context, 'Fehler', err.message!);
                     } catch (err) {
+                      EasyLoading.dismiss();
                       Navigator.of(context).pop();
                       Yust.service.showAlert(context, 'Fehler', err.toString());
                     }
@@ -176,7 +195,8 @@ class AccountEditScreen<T extends YustStore> extends StatelessWidget {
                 TextButton(
                   child: Text(
                     'Speichern',
-                    style: TextStyle(color: Theme.of(context).accentColor),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.secondary),
                   ),
                   onPressed: () async {
                     try {
@@ -188,9 +208,11 @@ class AccountEditScreen<T extends YustStore> extends StatelessWidget {
                       Yust.service.showAlert(context, 'Passwort geändert',
                           'Dein Passwort wurde erfolgreich geändert.');
                     } on PlatformException catch (err) {
+                      EasyLoading.dismiss();
                       Navigator.of(context).pop();
                       Yust.service.showAlert(context, 'Fehler', err.message!);
                     } catch (err) {
+                      EasyLoading.dismiss();
                       Navigator.of(context).pop();
                       Yust.service.showAlert(context, 'Fehler', err.toString());
                     }

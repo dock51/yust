@@ -12,6 +12,7 @@ class YustNumberField extends StatefulWidget {
   final ChangeCallback? onChanged;
   final ChangeCallback? onEditingComplete;
   final void Function()? onRealEditingComplete;
+  final TextEditingController? controller;
   final TabCallback? onTab;
   final bool readOnly;
   final bool enabled;
@@ -27,6 +28,7 @@ class YustNumberField extends StatefulWidget {
     this.onChanged,
     this.onEditingComplete,
     this.onRealEditingComplete,
+    this.controller,
     this.onTab,
     this.enabled = true,
     this.readOnly = false,
@@ -44,13 +46,17 @@ class _YustNumberFieldState extends State<YustNumberField> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
   num? _oldValue;
+  late num _initValue;
 
   @override
   void initState() {
     super.initState();
-
-    _controller = TextEditingController(
-        text: widget.value?.toString().replaceAll(RegExp(r'\.'), ','));
+    final value = widget.value?.toString().replaceAll(RegExp(r'\.'), ',');
+    if (widget.controller != null && value != null) {
+      widget.controller!.text = value;
+    }
+    _controller = widget.controller ?? TextEditingController(text: value);
+    _initValue = widget.value ?? 0;
     _focusNode = widget.focusNode ?? FocusNode();
     _focusNode.addListener(() {
       if (!_focusNode.hasFocus && widget.onEditingComplete != null) {
@@ -69,6 +75,14 @@ class _YustNumberFieldState extends State<YustNumberField> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.value != null &&
+        widget.onChanged == null &&
+        widget.value != _initValue &&
+        widget.value != _valueToNum(_controller.text.trim())) {
+      _controller.text =
+          widget.value!.toString().replaceAll(RegExp(r'\.'), ',');
+      _initValue = widget.value!;
+    }
     return TextField(
       decoration: InputDecoration(
         labelText: widget.label,

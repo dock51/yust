@@ -2,10 +2,9 @@ library yust;
 
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import 'models/yust_doc_setup.dart';
@@ -22,7 +21,8 @@ class Yust {
   static late YustStore store;
   static late YustService service;
   static late YustDocSetup<YustUser> userSetup;
-  static bool useTimestamps = false;
+  @Deprecated('`useTimestamps` will allways be set to true.')
+  static bool useTimestamps = true;
   static bool useSubcollections = false;
   static String envCollectionName = 'envs';
   static String? storageUrl;
@@ -48,7 +48,7 @@ class Yust {
     Yust.storageUrl = storageUrl;
     Yust.imagePlaceholderPath = imagePlaceholderPath;
 
-    if (kIsWeb) await FirebaseFirestore.instance.enablePersistence();
+    FirebaseStorage.instance.setMaxUploadRetryTime(Duration(seconds: 20));
 
     final packageInfo = await PackageInfo.fromPlatform();
 

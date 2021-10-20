@@ -1,7 +1,7 @@
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:connectivity/connectivity.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart' as firebase_storage;
 import 'package:flutter/foundation.dart';
@@ -34,10 +34,10 @@ class YustFilePicker extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _YustFilePickerState createState() => _YustFilePickerState();
+  YustFilePickerState createState() => YustFilePickerState();
 }
 
-class _YustFilePickerState extends State<YustFilePicker> {
+class YustFilePickerState extends State<YustFilePicker> {
   late List<Map<String, String>> _files;
   Map<String?, bool> _processing = {};
   late bool _enabled;
@@ -63,7 +63,7 @@ class _YustFilePickerState extends State<YustFilePicker> {
       return SizedBox.shrink();
     }
     return IconButton(
-      icon: Icon(Icons.add, color: Theme.of(context).accentColor),
+      icon: Icon(Icons.add, color: Theme.of(context).colorScheme.secondary),
       onPressed: _enabled ? _pickFiles : null,
     );
   }
@@ -109,51 +109,70 @@ class _YustFilePickerState extends State<YustFilePicker> {
     );
   }
 
+  Future<void> addFile(
+      Map<String, String> fileData, File? file, Uint8List? bytes) async {
+    setState(() {
+      _files.add(fileData);
+      _files.sort((a, b) => a['name']!.compareTo(b['name']!));
+      _processing[fileData['name']] = true;
+    });
+
+    try {
+      fileData['url'] = await Yust.service.uploadFile(
+        path: widget.folderPath,
+        name: fileData['name']!,
+        file: file,
+        bytes: bytes,
+      );
+    } on YustException catch (e) {
+      if (mounted) {
+        Yust.service.showAlert(context, 'Ups', e.message);
+      }
+    } catch (e) {
+      if (mounted) {
+        Yust.service.showAlert(
+            context, 'Ups', 'Die Datei konnte nicht hochgeladen werden.');
+      }
+    }
+    if (fileData['url'] == null) {
+      _files.remove(fileData);
+    }
+    _processing[fileData['name']] = false;
+    if (mounted) {
+      setState(() {});
+    }
+    widget.onChanged!(_files);
+  }
+
   Future<void> _pickFiles() async {
-    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
-    if (result != null) {
-      for (final platformFile in result.files) {
-        var name = platformFile.name!.split('/').last;
-        final ext = platformFile.extension;
-        if (ext != null && name.split('.').last != ext) {
-          name += '.' + ext;
-        }
-        Map<String, String> fileData = {
-          'name': name,
-        };
-        if (_files.any((file) => file['name'] == fileData['name'])) {
-          Yust.service.showAlert(context, 'Nicht möglich',
-              'Eine Datei mit dem Namen ${fileData['name']} existiert bereits.');
-        } else {
-          setState(() {
-            _files.add(fileData);
-            _files.sort((a, b) => a['name']!.compareTo(b['name']!));
-            _processing[fileData['name']] = true;
-          });
-          File? file;
-          if (platformFile.path != null) {
-            file = File(platformFile.path!);
+    Yust.service.unfocusCurrent(context);
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      Yust.service.showAlert(context, 'Kein Internet',
+          'Für das Hinzufügen einer Datei ist eine Internetverbindung erforderlich.');
+    } else {
+      final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+      if (result != null) {
+        for (final platformFile in result.files) {
+          var name = platformFile.name!.split('/').last;
+          final ext = platformFile.extension;
+          if (ext != null && name.split('.').last != ext) {
+            name += '.' + ext;
           }
-          try {
-            var result = await Yust.service.uploadFile(
-              path: widget.folderPath,
-              name: fileData['name']!,
-              file: file,
-              bytes: platformFile.bytes,
-            );
-            fileData['url'] = result;
-          } on YustException catch (e) {
-            Yust.service.showAlert(context, 'Ups', e.message);
-          } catch (e) {
-            Yust.service.showAlert(
-                context, 'Ups', 'Die Datei konnte nicht hochgeladen werden.');
+          Map<String, String> fileData = {
+            'name': name,
+          };
+          if (_files.any((file) => file['name'] == fileData['name'])) {
+            Yust.service.showAlert(context, 'Nicht möglich',
+                'Eine Datei mit dem Namen ${fileData['name']} existiert bereits.');
+          } else {
+            File? file;
+            if (platformFile.path != null) {
+              file = File(platformFile.path!);
+            }
+            await addFile(fileData, file, platformFile.bytes);
           }
-          if (fileData['url'] == null) {
-            _files.remove(fileData);
-          }
-          setState(() {
-            _processing[fileData['name']] = false;
-          });
+          widget.onChanged!(_files);
         }
       }
       widget.onChanged!(_files);
@@ -161,7 +180,13 @@ class _YustFilePickerState extends State<YustFilePicker> {
   }
 
   Future<void> _showFile(Map<String, String> file) async {
-    if (file['name'] != null && _processing[file['name']] != true) {
+    Yust.service.unfocusCurrent(context);
+    final connectivityResult = await Connectivity().checkConnectivity();
+    if (connectivityResult == ConnectivityResult.none) {
+      Yust.service.showAlert(context, 'Kein Internet',
+          'Für das Anzeigen einer Datei ist eine Internetverbindung erforderlich.');
+      // is it a valid file?
+    } else if (file['name'] != null && _processing[file['name']] != true) {
       // is the process running on mobile?
       if (!kIsWeb) {
         await EasyLoading.show(status: 'Datei laden...');
@@ -200,6 +225,7 @@ class _YustFilePickerState extends State<YustFilePicker> {
   }
 
   Future<void> _deleteFile(Map<String, String> file) async {
+    Yust.service.unfocusCurrent(context);
     final connectivityResult = await Connectivity().checkConnectivity();
     if (connectivityResult == ConnectivityResult.none) {
       Yust.service.showAlert(context, 'Kein Internet',

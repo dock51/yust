@@ -1,3 +1,38 @@
+## 2.5.2 - 2021-10-02
+
+* Add multiple image support to image picker
+
+## 2.5.1 - 2021-10-01
+
+* Optimize widgets for smaller screens
+
+## 2.5.0 - 2021-10-01
+
+* Migrate to Flutter 2.5.1
+* Improve text and number fields
+* Improve image picker
+* Disable persistence for browser
+* Fix bugs
+
+## 2.4.0 - 2021-08-27
+
+* Add validation to input fields
+* Add controllers to input fields
+* Fix bugs
+
+## 2.3.0 - 2021-08-07
+
+* Improve focus handling
+* Improve timestamp convertion
+* Fix bugs
+
+## 2.2.0 - 2021-07-02
+
+* Add checkbox control for switch
+* Support Firebase subcollections
+* Add quality setting to image picker
+* Improve file offline handling
+
 ## 2.1.1 - 2021-06-03
 
 * Improve null safety
